@@ -1,0 +1,4 @@
+# ASUS ProArt PX13 HN7306EAC battery charge-limit workaround.
+# KDE PowerDevil bug 450551: many laptops reset charge_control_end_threshold to 100 on reboot.
+# Start the retrying systemd service whenever BAT0 is reported.
+ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{type}=="Battery", TAG+="systemd", ENV{SYSTEMD_WANTS}+="px13-battery-charge-limit.service"

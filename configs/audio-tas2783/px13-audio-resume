@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+PCI_BRIDGE=0000:00:08.1
+PCI_ACP=0000:c4:00.5
+PCI_ACP_DRIVER=/sys/bus/pci/drivers/snd_pci_ps
+
+log() {
+  printf 'px13-audio-resume: %s\n' "$*"
+}
+
+force_pci_on() {
+  local dev_path
+
+  dev_path="/sys/bus/pci/devices/$1"
+  [ -e "$dev_path" ] || {
+    log "PCI device $1 is not present"
+    return 0
+  }
+
+  [ -w "$dev_path/d3cold_allowed" ] && printf '0\n' > "$dev_path/d3cold_allowed"
+  [ -w "$dev_path/power/control" ] && printf 'on\n' > "$dev_path/power/control"
+}
+
+force_audio_runtime_on() {
+  local dev_path
+
+  for dev_path in \
+    /sys/bus/soundwire/devices/sdw:0:1:0102:0000:01:8 \
+    /sys/bus/soundwire/devices/sdw:0:1:0102:0000:01:b \
+    /sys/bus/soundwire/devices/sdw:0:1:025d:0721:01 \
+    /sys/bus/platform/devices/amd_sdw \
+    /sys/bus/platform/devices/amd_sdw_manager.0 \
+    /sys/bus/platform/devices/amd_sdw_manager.1 \
+    /sys/bus/platform/devices/amd_ps_sdw_dma.0
+  do
+    [ -w "$dev_path/power/control" ] && printf 'on\n' > "$dev_path/power/control"
+  done
+}
+
+reset_acp() {
+  [ -e "/sys/bus/pci/devices/$PCI_ACP" ] || {
+    log "ACP device $PCI_ACP is not present"
+    return 1
+  }
+  [ -w "$PCI_ACP_DRIVER/unbind" ] && [ -w "$PCI_ACP_DRIVER/bind" ] || {
+    log "ACP driver bind controls are not writable"
+    return 1
+  }
+
+  timeout 30 sh -c 'printf "%s" "$1" > "$2/unbind"' sh "$PCI_ACP" "$PCI_ACP_DRIVER" || {
+    log "unbind failed for $PCI_ACP"
+    return 1
+  }
+
+  sleep 2
+  force_pci_on "$PCI_BRIDGE"
+
+  timeout 30 sh -c 'printf "%s" "$1" > "$2/bind"' sh "$PCI_ACP" "$PCI_ACP_DRIVER" || {
+    log "bind failed for $PCI_ACP"
+    return 1
+  }
+
+  sleep 3
+}
+
+restore_mixer() {
+  amixer -q -c amdsoundwire sset 'tas2783-1 Amp' 20 || true
+  amixer -q -c amdsoundwire sset 'tas2783-2 Amp' 20 || true
+  amixer -q -c amdsoundwire sset 'tas2783-1 Speaker' 200 || true
+  amixer -q -c amdsoundwire sset 'tas2783-2 Speaker' 200 || true
+  amixer -q -c amdsoundwire sset 'Left Spk' on || true
+  amixer -q -c amdsoundwire sset 'Right Spk' on || true
+  amixer -q -c amdsoundwire sset 'Left Spk2' on || true
+  amixer -q -c amdsoundwire sset 'Right Spk2' on || true
+}
+
+force_pci_on "$PCI_BRIDGE"
+force_pci_on "$PCI_ACP"
+force_audio_runtime_on
+reset_acp
+force_pci_on "$PCI_BRIDGE"
+force_pci_on "$PCI_ACP"
+force_audio_runtime_on
+restore_mixer
+log done

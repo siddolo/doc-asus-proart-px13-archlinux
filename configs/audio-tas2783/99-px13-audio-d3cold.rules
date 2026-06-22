@@ -1,0 +1,4 @@
+# ASUS ProArt PX13 HN7306EAC TAS2783 suspend workaround.
+# Prevent ACP bridge/controller D3cold; otherwise SoundWire TAS2783 resume can time out.
+SUBSYSTEM=="pci", KERNEL=="0000:00:08.1", ATTR{d3cold_allowed}="0", ATTR{power/control}="on"
+SUBSYSTEM=="pci", KERNEL=="0000:c4:00.5", ATTR{d3cold_allowed}="0", ATTR{power/control}="on"

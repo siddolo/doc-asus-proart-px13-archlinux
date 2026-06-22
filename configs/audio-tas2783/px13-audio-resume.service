@@ -1,0 +1,11 @@
+[Unit]
+Description=ASUS PX13 TAS2783 audio resume workaround
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/px13-audio-resume
+TimeoutStartSec=60
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
