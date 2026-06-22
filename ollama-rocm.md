@@ -1,6 +1,6 @@
 # Ollama ROCm su ASUS ProArt PX13
 
-Questa guida descrive l'installazione di Ollama su Arch Linux con backend ROCm per AMD Ryzen AI Max+ 395 / Radeon 8060S e directory modelli dedicata in `/srv/models/ollama`. Per il motivo di quel path, vedi lo schema di partizionamento in [Installazione base Arch Linux](installazione-base-arch-linux.md), dove `/srv/models` è montato dal subvolume Btrfs `@models` dedicato ai modelli LLM.
+Questa guida descrive l'installazione di Ollama su Arch Linux con backend ROCm per AMD Ryzen AI Max+ 395 / Radeon 8060S e directory modelli dedicata in `/srv/models/ollama`. Per il motivo di quel path, vedi lo schema di partizionamento in [Installazione base Arch Linux](installazione.md), dove `/srv/models` è montato dal subvolume Btrfs `@models` dedicato ai modelli LLM.
 
 La configurazione usa il servizio systemd fornito dal pacchetto Arch e drop-in sotto `/etc/systemd/system/ollama.service.d/`. La configurazione kernel ottimizzata per workload AI è documentata in [Kernel AI tuning](kernel-ai-tuning.md). Il backend Vulkan è documentato separatamente in [Ollama Vulkan](ollama-vulkan.md).
 
@@ -26,7 +26,7 @@ pacman -Q ollama ollama-rocm rocm-core hipblas rocminfo
 
 La directory dei modelli viene spostata da `/var/lib/ollama` a `/srv/models/ollama`.
 
-Il motivo è nella guida di installazione base: [Installazione base Arch Linux](installazione-base-arch-linux.md) crea un subvolume Btrfs dedicato `@models` e lo monta in `/srv/models`. Quel subvolume nasce per i modelli LLM, che possono occupare decine di GiB e hanno caratteristiche diverse da root e home. Tenerli sotto `/srv/models` evita di gonfiare il subvolume root, rende più chiaro cosa escludere o trattare diversamente in snapshot/backup e centralizza lo storage dei modelli anche per altri motori AI.
+Il motivo è nella guida di installazione base: [Installazione base Arch Linux](installazione.md) crea un subvolume Btrfs dedicato `@models` e lo monta in `/srv/models`. Quel subvolume nasce per i modelli LLM, che possono occupare decine di GiB e hanno caratteristiche diverse da root e home. Tenerli sotto `/srv/models` evita di gonfiare il subvolume root, rende più chiaro cosa escludere o trattare diversamente in snapshot/backup e centralizza lo storage dei modelli anche per altri motori AI.
 
 Verifica che `/srv/models` sia montato sul subvolume dedicato.
 

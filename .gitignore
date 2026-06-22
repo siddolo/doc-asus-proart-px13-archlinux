@@ -1,4 +1,6 @@
 to-do/
 exports/
+__pycache__/
+*.py[cod]
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json

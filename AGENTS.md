@@ -7,10 +7,10 @@ I documenti Markdown non sono semplici log cronologici di quello che viene fatto
 ## Struttura
 
 - `README.md`: indice del vault/repository.
-- `installazione-base-arch-linux.md`: guida principale per installazione base e configurazione iniziale del portatile.
+- `installazione.md`: guida principale per installazione base e configurazione iniziale del portatile.
 - I documenti guida pubblicabili possono stare in root o in sottocartelle tematiche, per esempio `ollama/installazione.md` e `ollama/tuning.md`.
 - `configs/`: file installabili citati dalle guide, organizzati per area tecnica.
-- `exports/`: output generati per pubblicazione, in particolare MediaWiki; rispecchia i path dei documenti Markdown, per esempio `ollama/installazione.md` diventa `exports/ollama/installazione.wiki`.
+- `exports/`: output generati per pubblicazione, in particolare MediaWiki; i nomi compilati sostituiscono `-` con `_`, per esempio `ollama/driver-audio.md` diventa `exports/ollama/driver_audio.wiki`.
 - `tools/`: script di supporto per generare o verificare gli export.
 - `Makefile`: comandi per generare e verificare gli export MediaWiki dai documenti Markdown pubblicabili.
 - `.obsidian/`: configurazione del vault Obsidian.
@@ -19,6 +19,7 @@ I documenti Markdown non sono semplici log cronologici di quello che viene fatto
 ## Convenzioni
 
 - Il Markdown è la sorgente autorevole; gli export in `exports/` vanno rigenerati con `make wiki` o verificati con `make check`.
+- Gli export MediaWiki sono file compilati: devono usare nomi pagina e link interni compatibili con MediaWiki, mentre i sorgenti Markdown restano con nomi e link relativi adatti a Obsidian/GitHub.
 - `README.md` è solo l'indice dei documenti guida; non deve elencare script, configurazioni installabili, export generati o appunti locali.
 - I documenti Markdown pubblicabili sono tutti gli `.md` fuori da `.obsidian/`, `configs/`, `exports/`, `tools/` e `to-do/`, escluso `AGENTS.md`.
 - Usa link Markdown relativi, per esempio `[Installazione base](installazione-base-arch-linux.md)`, invece dei wikilink Obsidian, così i link restano compatibili sia con Obsidian sia con GitHub.
