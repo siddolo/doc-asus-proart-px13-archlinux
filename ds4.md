@@ -1,6 +1,6 @@
-# Dwarf Star 4
+# DwarfStar
 
-DwarfStar è un motore di inferenza nativo ottimizzato innanzitutto per DeepSeek V4 Flash scritto da Salvatore Sanfilippo, con supporto per DeepSeek V4 PRO su macchine dotate di memoria molto elevata.
+[DwarfStar](https://github.com/antirez/ds4) è un motore di inferenza nativo ottimizzato innanzitutto per DeepSeek V4 Flash scritto da Salvatore Sanfilippo, con supporto per DeepSeek V4 PRO su macchine dotate di memoria molto elevata.
 
 La configurazione kernel ottimizzata per workload AI è documentata in [Kernel AI tuning](kernel-ai-tuning.md).
 
