@@ -11,7 +11,7 @@ Alcune parti della documentazione sono specifiche dell’ASUS ProArt PX13 (audio
 - [Kernel AI tuning](kernel-ai-tuning.md)
 - [Ollama ROCm](ollama-rocm.md)
 - [Ollama Vulkan](ollama-vulkan.md)
-- [Dwarf Star 4](ds4.md)
+- [DwarfStar](ds4.md)
 
 ## Link utili
 
