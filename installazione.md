@@ -990,10 +990,10 @@ speaker-test -D pipewire -c 2 -r 48000 -F S16_LE -t sine -f 660 -l 2
 
 ## 16. Applicativi base
 
-Installa gli applicativi utente base: Firefox, KeePassXC, `uv`, `nvm` e Obsidian.
+Installa gli applicativi utente base.
 
 ```sh
-sudo pacman -S --needed --noconfirm firefox keepassxc uv nvm obsidian
+sudo pacman -S --needed --noconfirm wget aria2 firefox keepassxc uv nvm obsidian
 ```
 
 Inizializza `nvm` per le nuove shell Bash dell'utente. Il pacchetto Arch installa gli script in `/usr/share/nvm`, ma richiede il `source` nel profilo shell dell'utente.
