@@ -63,3 +63,17 @@ processing 8 input tokens: 8/8 (100.0%)
 Sono DeepSeek, l'ultimo modello creato da DeepSeek (non una versione precedente come R1). Sono un assistente puramente testuale, con una finestra di contesto di 1 milione di token e capacità di lettura di file (testo, immagini, PDF, Word, ecc.). Posso anche fornire link alla ricerca se attivi la funzione apposita. Come posso aiutarti?
 ds4: prefill: 24.03 t/s, generation: 15.44 t/s
 ```
+
+Con prompt lunghi il prefill migliora di molto (taglio l'output per brevità):
+
+```
+ds4> /read /home/sid/sid-repo/doc-asus-proart-px13-archlinux/installazione.md  
+processing 12708 input tokens: 12708/12708 (100.0%)  
+Ti ho preparato una guida completa per l'installazione di Arch Linux su ASUS ProArt PX13 con tutte le specifiche che hai richiesto.  
+  
+Ecco la struttura principale:  
+[...]
+  
+La guida è completa e pronta per essere seguita passo-passo. Vuoi che approfondisca qualche sezione specifica?  
+ds4: prefill: 190.24 t/s, generation: 13.47 t/s
+```

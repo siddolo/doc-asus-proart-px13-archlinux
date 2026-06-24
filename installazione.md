@@ -10,9 +10,10 @@ I valori di riferimento sono:
 - Timezone: `Europe/Rome`
 - Lingua applicativi: inglese, con convenzioni numeriche/valuta italiane
 - Layout tastiera per LUKS: italiano
-- Boot default: kernel `linux`, senza `nomodeset`
 
-## 1. Preparazione ISO
+## 1. Boot da Live ISO
+
+La ISO Arch utilizzata (archlinux-2026.06.01-x86_64.iso) ha bisogno del parmetro kernel `nomodeset` per arrivare al login. Tale parametro serve solo nella live, non sarà usato per il kernel installato.
 
 Imposta il layout tastiera italiano nella live ISO. È importante perché la passphrase LUKS viene digitata con questo layout.
 
@@ -240,7 +241,7 @@ pacman -Sy --noconfirm archlinux-keyring
 Installa il sistema base, entrambi i kernel, firmware, microcode AMD, strumenti storage/boot, rete, SSH, sudo, `inetutils` per comandi come `hostname` e userspace grafico AMD/Mesa. `mesa-vdpau` era stato considerato ma non era disponibile nel repository usato.
 
 ```sh
-pacstrap -K /mnt base base-devel linux linux-lts linux-firmware linux-headers linux-lts-headers amd-ucode btrfs-progs lvm2 cryptsetup dosfstools efibootmgr networkmanager openssh sudo inetutils vim nano git bash-completion man-db man-pages texinfo sof-firmware mesa vulkan-radeon libva-mesa-driver iwd usbutils pciutils
+pacstrap -K /mnt base base-devel linux linux-lts linux-firmware linux-headers linux-lts-headers amd-ucode btrfs-progs lvm2 cryptsetup dosfstools efibootmgr networkmanager openssh sudo inetutils vim nano git bash-completion man-db man-pages texinfo sof-firmware mesa vulkan-radeon libva-mesa-driver iwd usbutils pciutils wget amd-debug-tools ethtool
 ```
 
 ## 7. Configurazione sistema
@@ -468,7 +469,7 @@ sync
 
 ## 12. Primo boot
 
-Riavvia nel sistema installato. Rimuovi la chiavetta se necessario o scegli `Arch Linux` dal firmware.
+Riavvia nel sistema installato. Rimuovi la chiavetta se necessario o scegli `Arch Linux` dal boot menu.
 
 ```sh
 reboot
@@ -490,7 +491,7 @@ sudo cryptsetup luksChangeKey /dev/nvme0n1p2
 
 Il valore predefinito tipico di `umask` è `0022`: i nuovi file vengono creati come `0644` e le nuove directory come `0755`. Questo lascia permessi di lettura/accesso a `others`, troppo permissivi per un laptop personale.
 
-Il gruppo primario di `sid` è `sid` e non contiene altri utenti; quindi è accettabile mantenere permessi di lettura/accesso per il gruppo privato, rimuovendo invece ogni permesso a `others`.
+Il gruppo primario dell'utente `sid` è `sid` e non contiene altri utenti; quindi è accettabile mantenere permessi di lettura/accesso per il gruppo privato, rimuovendo invece ogni permesso a `others`.
 
 Configura `umask` a `027` per le nuove sessioni login e applicala anche alla shell corrente, così i comandi successivi della procedura creano file con permessi più restrittivi.
 
@@ -715,7 +716,7 @@ Fonte firmware: driver ufficiale ASUS SmartAmp per `HN7306EAC`:
 https://dlcdnets.asus.com/pub/ASUS/nb/Image/Driver/Audio/47519/SmartAMP_TI_DCH_TexasInstruments_Z_V6.3.1.15_47519.exe?model=HN7306EAC
 ```
 
-Riferimento procedura: `https://gist.github.com/cryptob1/f62aaf8517df2e540f447347f42c7a03`.
+Riferimento procedura: https://gist.github.com/cryptob1/f62aaf8517df2e540f447347f42c7a03.
 
 Nota su `iommu=pt`: il gist `cryptob1` lo cita come parametro consigliato per Strix Halo e l'issue CachyOS `https://github.com/CachyOS/linux-cachyos/issues/737` lo riporta come workaround per alcuni problemi di boot/fault AMD-Vi. Su questa installazione non è parte del fix audio: il test con `iommu=pt` non ha risolto il problema suspend/resume TAS2783, quindi la riga kernel non è stata utilizzata.
 
@@ -775,7 +776,7 @@ sudo install -m 644 "$SRC_DIR/1714-1-0x8.bin" /lib/firmware/ti/audio/tas2783/171
 sudo install -m 644 "$SRC_DIR/1714-1-0xB.bin" /lib/firmware/ti/audio/tas2783/1714-1-B.bin
 ```
 
-Configurazione WirePlumber:
+Configurazione WirePlumber. Il profilo `pro-audio` espone il PCM degli speaker TAS2783 come `pro-output-2`. Sullo stesso profilo il kernel espone anche il capture SmartAmp `pro-input-3` (`SDW1-PIN4-CAPTURE-SmartAmp`), che non è un microfono utente e può fallire con errori SoundWire `-22` quando Plasma enumera le sorgenti audio. Per questo la configurazione disabilita solo quel nodo e preferisce il DMIC interno `pro-input-4` come sorgente di input.
 
 ```sh
 mkdir -p ~/.config/wireplumber/wireplumber.conf.d
@@ -802,6 +803,27 @@ monitor.alsa.rules = [
       }
     }
   }
+  {
+    matches = [
+      { node.name = "alsa_input.pci-0000_c4_00.5-platform-amd_sdw.pro-input-3" }
+    ]
+    actions = {
+      update-props = {
+        node.disabled = true
+      }
+    }
+  }
+  {
+    matches = [
+      { node.name = "alsa_input.pci-0000_c4_00.5-platform-amd_sdw.pro-input-4" }
+    ]
+    actions = {
+      update-props = {
+        node.description = "Internal Microphones (DMIC)"
+        priority.session = 2600
+      }
+    }
+  }
 ]
 EOF
 ```
@@ -815,13 +837,15 @@ sudo reboot
 Verifica post-reboot:
 
 ```sh
-dmesg | rg -i 'tas2783|1714-1|playback without fw'
+sudo journalctl -k -b --no-pager | rg -i 'tas2783|1714-1|playback without fw|SDW1-PIN4-CAPTURE-SmartAmp|Program transport'
 wpctl status
+pactl list sources short
 pactl set-default-sink alsa_output.pci-0000_c4_00.5-platform-amd_sdw.pro-output-2
+pactl set-default-source alsa_input.pci-0000_c4_00.5-platform-amd_sdw.pro-input-4
 speaker-test -D pipewire -c 2 -r 48000 -F S16_LE -t sine -f 440 -l 1
 ```
 
-Dopo il reboot `dmesg` non deve mostrare errori firmware TAS2783, PipeWire deve esporre `Internal Speakers (TAS2783)` come sink e il test stereo PipeWire deve produrre un tono udibile. Evita come test principale `/usr/share/sounds/alsa/Front_Center.wav`: è mono, mentre il PCM TAS2783 espone solo stereo a 48 kHz e può produrre risultati fuorvianti.
+Dopo il reboot il journal kernel non deve mostrare errori firmware TAS2783, `playback without fw`, né nuovi errori `Program transport params failed` sul nodo `SDW1-PIN4-CAPTURE-SmartAmp`. PipeWire deve esporre `Internal Speakers (TAS2783)` come sink, `Internal Microphones (DMIC)` come source, e non deve esporre `alsa_input.pci-0000_c4_00.5-platform-amd_sdw.pro-input-3`. Il test stereo PipeWire deve produrre un tono udibile. Evita come test principale `/usr/share/sounds/alsa/Front_Center.wav`: è mono, mentre il PCM TAS2783 espone solo stereo a 48 kHz e può produrre risultati fuorvianti.
 
 Workaround suspend/resume.
 
@@ -988,12 +1012,28 @@ wpctl status
 speaker-test -D pipewire -c 2 -r 48000 -F S16_LE -t sine -f 660 -l 2
 ```
 
+Per disabilitare il suspend/resume workaround:
+
+```sh
+sudo systemctl disable px13-audio-resume.service
+sudo mv /etc/udev/rules.d/99-px13-audio-d3cold.rules /etc/udev/rules.d/99-px13-audio-d3cold.rules.disabled
+sudo udevadm control --reload
+```
+
+Per riabilitarlo:
+
+```sh
+sudo mv /etc/udev/rules.d/99-px13-audio-d3cold.rules.disabled /etc/udev/rules.d/99-px13-audio-d3cold.rules
+sudo udevadm control --reload
+sudo systemctl enable px13-audio-resume.service
+```
+
 ## 16. Applicativi base
 
 Installa gli applicativi utente base.
 
 ```sh
-sudo pacman -S --needed --noconfirm wget aria2 firefox keepassxc uv nvm obsidian
+sudo pacman -S --needed --noconfirm aria2 firefox keepassxc uv nvm obsidian
 ```
 
 Inizializza `nvm` per le nuove shell Bash dell'utente. Il pacchetto Arch installa gli script in `/usr/share/nvm`, ma richiede il `source` nel profilo shell dell'utente.
@@ -1014,7 +1054,7 @@ Per Firefox, dopo l'installazione dei dizionari Hunspell riavvia il browser se e
 
 Obsidian è un'app Electron e non usa necessariamente lo spell check globale di KDE Plasma. Configura la lingua da `Settings` -> `Editor` -> `Spellcheck languages`: usa italiano come lingua principale e aggiungi inglese statunitense se vuoi poterlo selezionare quando scrivi testo in inglese. Le preferenze e i dizionari scaricati da Obsidian sono globali dell'app, sotto `~/.config/obsidian`, mentre le impostazioni del vault restano sotto `.obsidian/`.
 
-## 17. Note hardware PX13 verificate
+## 17. Note hardware PX13
 
 Le discussioni storiche sul PX13 citano problemi con kernel 6.11/6.12, Bluetooth MediaTek, NVIDIA, retroilluminazione tastiera e audio. Sul modello `ProArt PX13 HN7306EAC` con Ryzen AI MAX+ 395 / Radeon 8060S e kernel `7.0.12`, la configurazione verificata è questa:
 
@@ -1032,4 +1072,4 @@ Le discussioni storiche sul PX13 citano problemi con kernel 6.11/6.12, Bluetooth
 
 Il limite di carica configurato dalla GUI KDE/PowerDevil non è persistente su questo PX13 con i pacchetti attuali: dopo reboot il valore kernel può tornare a `100`. È un problema noto upstream, KDE Bug `450551`, con duplicato `452533`. La configurazione locale usa `px13-battery-charge-limit.timer`, `px13-battery-charge-limit.service` e una regola udev di trigger per riportare automaticamente `BAT0` a `85` al boot; questi file vanno rimossi o aggiornati quando PowerDevil includerà un fix nativo.
 
-Al momento l'ibernazione dalla sessione Plasma Wayland non è affidabile: può bloccarsi durante l'ingresso in hibernate o riprendere con artefatti/lockup grafici, quindi va considerata non funzionante finché non viene corretto il problema nel kernel/driver grafico.
+~~Al momento l'ibernazione dalla sessione Plasma Wayland non è affidabile: può bloccarsi durante l'ingresso in hibernate o riprendere con artefatti/lockup grafici, quindi va considerata non funzionante finché non viene corretto il problema nel kernel/driver grafico.~~ (fixed con il kernel 7.0.13)
