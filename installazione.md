@@ -703,7 +703,7 @@ cat /sys/class/power_supply/BAT0/charge_control_end_threshold
 L'output atteso è `enabled`, `Result=success` e `85`. KDE dovrebbe mostrare `Stop charging at: 85%` perché il timer locale riapplica il limite dopo il completamento dell'avvio.
 ## 15. Audio interno TAS2783
 
-Sul PX13 HN7306EAC con kernel 7.0.12 il driver SoundWire/TAS2783 è presente, ma `linux-firmware` non contiene ancora i blob di calibrazione ASUS. 
+Sul PX13 HN7306EAC con kernel 7.0.12 il driver SoundWire/TAS2783 è presente, ma `linux-firmware` non contiene ancora i blob di calibrazione ASUS per via di una limitazione esplicita della licenza di Asus che ne impedisce la redistribusione. 
 Il kernel cerca `1714-1-8.bin` e `1714-1-B.bin`, fallisce il caricamento, e PipeWire mostra solo `Dummy Output`.
 
 Nota: in futuro si può rimuovere questa procedura se gli stessi firmware entrano in `linux-firmware`.
@@ -1072,4 +1072,8 @@ Le discussioni storiche sul PX13 citano problemi con kernel 6.11/6.12, Bluetooth
 
 Il limite di carica configurato dalla GUI KDE/PowerDevil non è persistente su questo PX13 con i pacchetti attuali: dopo reboot il valore kernel può tornare a `100`. È un problema noto upstream, KDE Bug `450551`, con duplicato `452533`. La configurazione locale usa `px13-battery-charge-limit.timer`, `px13-battery-charge-limit.service` e una regola udev di trigger per riportare automaticamente `BAT0` a `85` al boot; questi file vanno rimossi o aggiornati quando PowerDevil includerà un fix nativo.
 
-~~Al momento l'ibernazione dalla sessione Plasma Wayland non è affidabile: può bloccarsi durante l'ingresso in hibernate o riprendere con artefatti/lockup grafici, quindi va considerata non funzionante finché non viene corretto il problema nel kernel/driver grafico.~~ (fixed con il kernel 7.0.13)
+L'audio TAS2783 ha bisogno del workaround descritto nel capitolo 15 (firmware blob ASUS, WirePlumber `pro-audio` e servizio post-resume). È in corso una discussione su una possibile soluzione kernel-side: [CachyOS issue #737](https://github.com/CachyOS/linux-cachyos/issues/737?timeline_page=1).
+
+~~Al momento l'ibernazione dalla sessione Plasma Wayland non è affidabile: può bloccarsi durante l'ingresso in hibernate o riprendere con artefatti/lockup grafici, quindi va considerata non funzionante finché non viene corretto il problema nel kernel/driver grafico.~~ (parzialmente fixed con il kernel 7.0.13)
+
+Al momento il PC può freezarsi durante la ripresa dell'ibernazione in uno stato in cui inizia a scaldare molto e siamo costretti a forzare lo spegnimento tenendo premuto il tasto di accensione (kernel 7.0.13 - 7.0.14)

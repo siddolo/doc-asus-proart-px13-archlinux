@@ -59,12 +59,12 @@ Prima del tuning il driver esponeva circa 4 GiB di VRAM visibile/firmware-reserv
 La nuova voce del boot-menu `Arch Linux AI tuning` userà questi parametri aggiuntivi:
 
 ```text
-amd_iommu=off amdgpu.gttsize=122880 ttm.pages_limit=31457280
+amdgpu.gttsize=122880 ttm.pages_limit=31457280
 ```
 
 `amd_iommu=off` disabilita l'AMD IOMMU. Su benchmark Strix Halo pubblicati nella [issue kyuz0/amd-strix-halo-toolboxes#66](https://github.com/kyuz0/amd-strix-halo-toolboxes/issues/66#issuecomment-4460612951), questa scelta ha mostrato un vantaggio del 5-12% rispetto a IOMMU attivo o `iommu=pt` in workload llama.cpp/ROCm, soprattutto in prompt processing e batch paralleli.
 
-Il trade-off è importante: disabilitare IOMMU riduce l'isolamento DMA. È una scelta orientata alle prestazioni per inferenza locale; non è ideale se servono VFIO/passthrough, isolamento DMA stretto o una postura di sicurezza più conservativa, soprattutto su un laptop con porte USB4.
+Il trade-off è importante: disabilitare IOMMU riduce l'isolamento DMA. È una scelta orientata alle prestazioni per inferenza locale; non è ideale se servono VFIO/passthrough, isolamento DMA stretto o una postura di sicurezza più conservativa, soprattutto su un laptop con porte USB4. Inoltre, su questa macchina rompe la sospensione, se IOMMU è disattivato il PC non entra mai nello stato deep sleep (S3) https://gitlab.freedesktop.org/drm/amd/-/work_items/5428.
 
 `amdgpu.gttsize=122880` imposta a 120 GiB il limite GTT utente del driver AMDGPU. Il valore è in MiB.
 
@@ -82,7 +82,7 @@ title Arch Linux AI tuning
 linux /vmlinuz-linux
 initrd /amd-ucode.img
 initrd /initramfs-linux.img
-options cryptdevice=UUID=d294d825-c130-4bf4-884f-be2bbb7b9ea2:cryptroot:allow-discards root=/dev/mapper/vg0-root rootflags=subvol=@ resume=UUID=dac24720-c492-4442-9bcf-7039eb94c386 rw amd_iommu=off amdgpu.gttsize=122880 ttm.pages_limit=31457280
+options cryptdevice=UUID=d294d825-c130-4bf4-884f-be2bbb7b9ea2:cryptroot:allow-discards root=/dev/mapper/vg0-root rootflags=subvol=@ resume=UUID=dac24720-c492-4442-9bcf-7039eb94c386 rw amdgpu.gttsize=122880 ttm.pages_limit=31457280
 EOF
 ```
 
@@ -131,34 +131,6 @@ Risultato verificato:
 Arch Linux AI tuning (default) (selected)
 ```
 
-Verifica poi che i parametri siano effettivi.
-
-```sh
-cat /proc/cmdline
-```
-
-Devono comparire:
-
-```text
-amd_iommu=off amdgpu.gttsize=122880 ttm.pages_limit=31457280
-```
-
-Risultato verificato: i tre parametri compaiono nella riga kernel attiva.
-
-Controllare IOMMU groups per GPU e NPU:
-
-```sh
-test -e /sys/bus/pci/devices/0000:c4:00.0/iommu_group && echo gpu_iommu_group=present || echo gpu_iommu_group=absent
-test -e /sys/bus/pci/devices/0000:c5:00.1/iommu_group && echo npu_iommu_group=present || echo npu_iommu_group=absent
-```
-
-Risultato atteso:
-
-```text
-gpu_iommu_group=absent
-npu_iommu_group=absent
-```
-
 Verifica i nuovi limiti GTT/TTM.
 
 ```sh
@@ -201,7 +173,7 @@ AMD Radeon 8060S Graphics
 
 ## 7. Ripristino rapido
 
-Se il sistema mostra regressioni grafiche, errori DRM/IOMMU, instabilità GPU o problemi con periferiche, riavvia e scegli `Arch Linux` dal menu `systemd-boot`. Quella voce non contiene i parametri AI tuning.
+Se il sistema mostra regressioni grafiche, errori DRM, instabilità GPU o problemi con periferiche, riavvia e scegli `Arch Linux` dal menu `systemd-boot`. Quella voce non contiene i parametri AI tuning.
 
 Per annullare il default senza rimuovere la voce:
 
@@ -222,4 +194,3 @@ Questo tuning è generale: può aiutare Ollama, llama.cpp, vLLM, PyTorch ROCm, C
 
 Su Strix Halo il backend migliore può cambiare tra ROCm e Vulkan in base a modello, quantizzazione, lunghezza contesto e rapporto tra prompt processing e token generation.
 
-Se in futuro viene usata virtualizzazione con passthrough, VFIO o workload che richiedono IOMMU, considera una voce alternativa con IOMMU attivo (oppure usa il fallback `Arch Linux`).
