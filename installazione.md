@@ -1072,8 +1072,8 @@ Le discussioni storiche sul PX13 citano problemi con kernel 6.11/6.12, Bluetooth
 
 Il limite di carica configurato dalla GUI KDE/PowerDevil non è persistente su questo PX13 con i pacchetti attuali: dopo reboot il valore kernel può tornare a `100`. È un problema noto upstream, KDE Bug `450551`, con duplicato `452533`. La configurazione locale usa `px13-battery-charge-limit.timer`, `px13-battery-charge-limit.service` e una regola udev di trigger per riportare automaticamente `BAT0` a `85` al boot; questi file vanno rimossi o aggiornati quando PowerDevil includerà un fix nativo.
 
-L'audio TAS2783 ha bisogno del workaround descritto nel capitolo 15 (firmware blob ASUS, WirePlumber `pro-audio` e servizio post-resume). È in corso una discussione su una possibile soluzione kernel-side: [CachyOS issue #737](https://github.com/CachyOS/linux-cachyos/issues/737?timeline_page=1).
+L'audio TAS2783 ha bisogno del workaround descritto nel capitolo 15 (firmware blob ASUS, WirePlumber `pro-audio` e servizio post-resume). È in corso una discussione su una possibile soluzione kernel-side: [CachyOS issue #737](https://github.com/CachyOS/linux-cachyos/issues/737?timeline_page=1) e [Bug 221584 - ASoC: amd: ps / soundwire: SDW peripherals unrecoverable after s0i3 on Strix Halo (ACP7.0)](https://bugzilla.kernel.org/show_bug.cgi?id=221584).
 
 ~~Al momento l'ibernazione dalla sessione Plasma Wayland non è affidabile: può bloccarsi durante l'ingresso in hibernate o riprendere con artefatti/lockup grafici, quindi va considerata non funzionante finché non viene corretto il problema nel kernel/driver grafico.~~ (parzialmente fixed con il kernel 7.0.13)
 
-Al momento il PC può freezarsi durante la ripresa dell'ibernazione in uno stato in cui inizia a scaldare molto e siamo costretti a forzare lo spegnimento tenendo premuto il tasto di accensione (kernel 7.0.13 - 7.0.14)
+Al momento il PC può freezarsi durante la ripresa dell'ibernazione in uno stato in cui inizia a scaldare molto e siamo costretti a forzare lo spegnimento tenendo premuto il tasto di accensione (kernel 7.0.13 - 7.1.3)
