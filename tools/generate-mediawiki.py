@@ -130,6 +130,10 @@ def markdown_link_to_mediawiki(label: str, destination: str, source: Path, ancho
     return f"[[{page}|{label}]]"
 
 
+def convert_strikethrough(text: str) -> str:
+    return re.sub(r"~~(.+?)~~", r"<s>\1</s>", text)
+
+
 def convert_links(text: str, source: Path, anchor_maps: dict[Path, dict[str, str]]) -> str:
     def replace(match: re.Match[str]) -> str:
         label = match.group(1)
@@ -142,7 +146,7 @@ def convert_links(text: str, source: Path, anchor_maps: dict[Path, dict[str, str
 def convert_inline(text: str, source: Path, anchor_maps: dict[Path, dict[str, str]]) -> str:
     parts = text.split("`")
     if len(parts) == 1:
-        return convert_links(text, source, anchor_maps)
+        return convert_links(convert_strikethrough(text), source, anchor_maps)
 
     converted: list[str] = []
     in_code = False
@@ -150,7 +154,7 @@ def convert_inline(text: str, source: Path, anchor_maps: dict[Path, dict[str, st
         if in_code:
             converted.append(f"<code>{html.escape(part, quote=False)}</code>")
         else:
-            converted.append(convert_links(part, source, anchor_maps))
+            converted.append(convert_links(convert_strikethrough(part), source, anchor_maps))
         in_code = not in_code
 
     return "".join(converted)
@@ -174,13 +178,46 @@ def convert_line(line: str, source: Path, anchor_maps: dict[Path, dict[str, str]
     return convert_inline(line, source, anchor_maps)
 
 
+def is_table_delimiter(line: str) -> bool:
+    return bool(re.match(r"^\|[-:| ]+\|$", line.strip()))
+
+
+def convert_table_block(lines: list[str], source: Path, anchor_maps: dict[Path, dict[str, str]]) -> list[str]:
+    if len(lines) < 3 or not is_table_delimiter(lines[1]):
+        return [convert_line(line, source, anchor_maps) for line in lines]
+
+    mw_lines: list[str] = ['{| class="wikitable"']
+
+    headers = [c.strip() for c in lines[0].strip("|").split("|")]
+    for cell in headers:
+        cell = convert_inline(cell, source, anchor_maps)
+        mw_lines.append(f"! {cell}")
+
+    for line in lines[2:]:
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        mw_lines.append("|-")
+        for cell in cells:
+            cell = convert_inline(cell, source, anchor_maps)
+            mw_lines.append(f"| {cell}")
+
+    mw_lines.append("|}")
+    return mw_lines
+
+
 def convert_markdown(markdown: str, source: Path, anchor_maps: dict[Path, dict[str, str]]) -> str:
     output: list[str] = []
     in_fence = False
+    table_buffer: list[str] = []
+
+    def flush_table() -> None:
+        if table_buffer:
+            output.extend(convert_table_block(table_buffer, source, anchor_maps))
+            table_buffer.clear()
 
     for line in markdown.splitlines():
         fence = re.match(r"^```\s*([^`]*)$", line)
         if fence:
+            flush_table()
             if in_fence:
                 output.append("</syntaxhighlight>")
                 in_fence = False
@@ -193,7 +230,13 @@ def convert_markdown(markdown: str, source: Path, anchor_maps: dict[Path, dict[s
             output.append(line)
             continue
 
-        output.append(convert_line(line, source, anchor_maps))
+        if line.lstrip().startswith("|"):
+            table_buffer.append(line)
+        else:
+            flush_table()
+            output.append(convert_line(line, source, anchor_maps))
+
+    flush_table()
 
     if in_fence:
         raise ValueError("unterminated Markdown code fence")
